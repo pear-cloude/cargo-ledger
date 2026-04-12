@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — Cargo-Ledger</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+</head>
+<body>
+<nav class="topbar">
+  <span class="brand">🛡 Cargo-Ledger Admin</span>
+  <nav>
+    <span style="color:rgba(255,255,255,.7);font-size:13px">
+      {{ session.admin_user }}
+    </span>
+    <a href="{{ url_for('admin_logout') }}" style="color:#ff8a65;margin-left:16px">
+      Sign Out
+    </a>
+  </nav>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin:12px 28px 0">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div style="padding:24px 28px">
+  <div style="display:flex;justify-content:space-between;align-items:center;
+              margin-bottom:22px">
+    <h1 style="font-size:22px;font-weight:700;color:var(--navy)">
+      User Management
+    </h1>
+    <button class="btn btn-orange"
+            onclick="document.getElementById('addModal').classList.add('open')">
+      + Add User
+    </button>
+  </div>
+
+  <!-- Site stats -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+              gap:14px;margin-bottom:24px">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Users</div>
+      <div class="kpi-value">{{ stats.total_users }}</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total Records</div>
+      <div class="kpi-value">{{ stats.total_records }}</div>
+    </div>
+    {% for sid, data in stats.sites.items() %}
+    <div class="kpi-card cyan">
+      <div class="kpi-label">{{ sid }} — Records</div>
+      <div class="kpi-value">{{ data.trips }}</div>
+      <div class="kpi-unit">{{ "{:,.0f}".format(data.net) }} kg net</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Users table -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:16px 22px;font-weight:600;color:var(--navy);
+                border-bottom:1px solid var(--border)">
+      All Users
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Name</th><th>Email</th><th>Role</th>
+            <th>Sites</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td><strong>{{ u.name }}</strong></td>
+            <td style="font-size:12px">{{ u.email }}</td>
+            <td>
+              {% if u.role == 'govt' %}
+                <span class="badge badge-red">GOVT</span>
+              {% else %}
+                <span class="badge badge-orange">MANAGER</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px">{{ u.site_ids }}</td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge badge-green">Active</span>
+              {% else %}
+                <span class="badge badge-red">Suspended</span>
+              {% endif %}
+            </td>
+            <td style="white-space:nowrap">
+              <a href="{{ url_for('admin_toggle_user', uid=u.id) }}"
+                 class="btn btn-sm {% if u.is_active %}btn-red{% else %}btn-green{% endif %}"
+                 onclick="return confirm('Toggle user {{ u.name }}?')">
+                {% if u.is_active %}Suspend{% else %}Activate{% endif %}
+              </a>
+              <button class="btn btn-sm btn-outline"
+                      onclick="showReset({{ u.id }}, '{{ u.name }}')">
+                Reset PW
+              </button>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div id="addModal" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close"
+            onclick="document.getElementById('addModal').classList.remove('open')">
+      ✕
+    </button>
+    <h3>Add New User</h3>
+    <form method="POST" action="{{ url_for('admin_add_user') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
+          <input type="text" name="password" required placeholder="Set login password">
+        </div>
+        <div class="form-group">
+          <label>Role *</label>
+          <select name="role">
+            <option value="manager">Manager (can see all, full access)</option>
+            <option value="govt">Govt (read-only, all sites)</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-navy" style="flex:1;justify-content:center">
+          Create User
+        </button>
+        <button type="button" class="btn btn-outline"
+                onclick="document.getElementById('addModal').classList.remove('open')">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div id="resetModal" class="modal-overlay">
+  <div class="modal-box" style="width:340px">
+    <button class="modal-close"
+            onclick="document.getElementById('resetModal').classList.remove('open')">
+      ✕
+    </button>
+    <h3>Reset Password</h3>
+    <p id="resetName" style="color:var(--muted);font-size:13px;margin-bottom:14px"></p>
+    <form id="resetForm" method="POST">
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="text" name="new_password" required placeholder="Enter new password">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-navy" style="flex:1;justify-content:center">
+          Reset
+        </button>
+        <button type="button" class="btn btn-outline"
+                onclick="document.getElementById('resetModal').classList.remove('open')">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showReset(uid, name) {
+  document.getElementById('resetName').textContent = 'User: ' + name;
+  document.getElementById('resetForm').action = '/admin/user/reset_password/' + uid;
+  document.getElementById('resetModal').classList.add('open');
+}
+window.onclick = e => {
+  if (e.target.classList.contains('modal-overlay'))
+    e.target.classList.remove('open');
+};
+</script>
+</body>
+</html>

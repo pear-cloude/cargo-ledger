@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Login — Cargo-Ledger</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="logo">
+      <div style="font-size:32px">🛡</div>
+      <div style="font-size:18px;font-weight:800;color:var(--navy)">Admin Panel</div>
+      <div style="font-size:11px;color:var(--muted)">Cargo-Ledger Management</div>
+    </div>
+    <h2>Admin Sign In</h2>
+    <p class="sub">Trionex Labs internal access only</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat,msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required>
+      </div>
+      <button class="btn btn-navy" style="width:100%;justify-content:center;padding:11px;font-size:14px">
+        Access Admin Panel →
+      </button>
+    </form>
+    <p style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">
+      Default: admin / admin@cargo2024
+    </p>
+  </div>
+</div>
+</body>
+</html>

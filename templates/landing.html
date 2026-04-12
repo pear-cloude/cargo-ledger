@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cargo-Ledger — Weighbridge Management System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="topbar">
+  <span class="brand">⚖ Cargo-Ledger</span>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="{{ url_for('login') }}" style="background:var(--orange);padding:6px 16px;border-radius:8px;color:#fff;font-weight:600">
+      Customer Login
+    </a>
+  </nav>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Weighbridge Management<br>Made Professional</h1>
+  <p>Complete weighbridge software with live CCTV, RFID scanning, auto-generated challans, and a real-time customer dashboard — all in one system.</p>
+  <div class="cta-row">
+    <a href="{{ url_for('login') }}" class="btn btn-orange" style="padding:13px 30px;font-size:15px">
+      Access Dashboard →
+    </a>
+    <a href="#pricing" class="btn btn-outline" style="padding:13px 30px;font-size:15px;border-color:white;color:white">
+      View Pricing
+    </a>
+  </div>
+  <p style="font-size:12px;opacity:.6;margin-top:20px">
+    Trusted by weighbridge operators across Eastern India
+  </p>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="section-head">
+    <h2>Everything You Need</h2>
+    <p>A complete solution from vehicle entry to digital challan delivery</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="icon">⚖</div>
+      <h4>Auto Weight Capture</h4>
+      <p>Direct COM port integration reads weight from your indicator automatically — no manual entry.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📷</div>
+      <h4>Live CCTV Integration</h4>
+      <p>3-camera RTSP feed with automatic snapshot capture and embedding in every challan PDF.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔖</div>
+      <h4>RFID / QR Scanning</h4>
+      <p>Scan any RFID tag or QR code to auto-fill vehicle details, driver name, and tare weight instantly.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📄</div>
+      <h4>Instant Challan & RST</h4>
+      <p>Professional PDF challans with your company logo, CCTV images, and all weight data generated automatically.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h4>Excel RST Reports</h4>
+      <p>Formatted Excel reports in standard RST format — auto-updated with every transaction.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🌐</div>
+      <h4>Online Dashboard</h4>
+      <p>View your records, charts, and reports from anywhere via this secure customer portal.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section style="background:var(--bg);padding:60px 0" id="pricing">
+  <div class="section-head">
+    <h2>Software Licensing</h2>
+    <p>One-time license — no monthly subscription. Dashboard access included.</p>
+  </div>
+  <div class="pricing-grid">
+
+    <div class="pricing-card">
+      <h3>Standard</h3>
+      <div class="price">₹24,999 <span>/ license</span></div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:4px">Single site, 1 year support</p>
+      <ul>
+        <li>1 Weighbridge Site</li>
+        <li>COM Port Integration</li>
+        <li>RFID / QR Scanning</li>
+        <li>PDF Challan Generation</li>
+        <li>Excel RST Reports</li>
+        <li>Customer Web Dashboard</li>
+        <li>1 Year License Validity</li>
+        <li>Email Support</li>
+      </ul>
+      <a href="mailto:sales@trionexlabs.com?subject=Standard License Enquiry"
+         class="btn btn-outline" style="width:100%;justify-content:center">
+        Get Quote
+      </a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="popular-tag">Most Popular</div>
+      <h3>Professional</h3>
+      <div class="price">₹49,999 <span>/ license</span></div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:4px">Up to 3 sites, 2 year support</p>
+      <ul>
+        <li>3 Weighbridge Sites</li>
+        <li>3-Camera CCTV System</li>
+        <li>Full RFID Integration</li>
+        <li>PDF + RST Report Suite</li>
+        <li>Real-time Web Dashboard</li>
+        <li>Data Sync to Cloud</li>
+        <li>2 Year License Validity</li>
+        <li>Priority Phone Support</li>
+      </ul>
+      <a href="mailto:sales@trionexlabs.com?subject=Professional License Enquiry"
+         class="btn btn-navy" style="width:100%;justify-content:center">
+        Get Quote
+      </a>
+    </div>
+
+    <div class="pricing-card">
+      <h3>Enterprise</h3>
+      <div class="price">₹99,999 <span>/ license</span></div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:4px">Unlimited sites, lifetime</p>
+      <ul>
+        <li>Unlimited Sites</li>
+        <li>Multi-camera Support</li>
+        <li>API Integration</li>
+        <li>Custom Branding</li>
+        <li>Advanced Analytics</li>
+        <li>Custom Report Formats</li>
+        <li>Lifetime License</li>
+        <li>Dedicated On-site Support</li>
+      </ul>
+      <a href="mailto:sales@trionexlabs.com?subject=Enterprise License Enquiry"
+         class="btn btn-orange" style="width:100%;justify-content:center">
+        Contact Sales
+      </a>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px">
+    All plans include free installation support. Annual Maintenance Contract (AMC) available.
+  </p>
+</section>
+
+<!-- CONTACT -->
+<section style="background:var(--navy);color:white;padding:60px 24px;text-align:center">
+  <h2 style="font-size:28px;font-weight:700;margin-bottom:12px">Ready to get started?</h2>
+  <p style="opacity:.8;font-size:15px;margin-bottom:28px">
+    Contact Trionex Labs for a demo and license quote.
+  </p>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+    <a href="mailto:sales@trionexlabs.com" class="btn btn-orange" style="padding:12px 28px">
+      📧 sales@trionexlabs.com
+    </a>
+    <a href="tel:+919800000000" class="btn btn-outline"
+       style="padding:12px 28px;border-color:white;color:white">
+      📞 +91 98000 00000
+    </a>
+  </div>
+</section>
+
+<footer>
+  © 2026 Cargo-Ledger by Trionex Labs &nbsp;|&nbsp;
+  <a href="{{ url_for('login') }}" style="color:rgba(255,255,255,.6)">Customer Login</a>
+  &nbsp;|&nbsp;
+  <a href="{{ url_for('admin_login') }}" style="color:rgba(255,255,255,.6)">Admin</a>
+</footer>
+</body>
+</html>

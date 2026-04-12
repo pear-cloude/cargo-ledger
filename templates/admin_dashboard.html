@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — Cargo-Ledger</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+</head>
+<body>
+<nav class="topbar">
+  <a href="{{ url_for('admin_dashboard') }}" class="brand">🛡 Cargo-Ledger Admin</a>
+  <nav>
+    <span style="color:rgba(255,255,255,.7);font-size:13px">
+      Logged in as <strong>{{ session.admin_user }}</strong>
+    </span>
+    <a href="{{ url_for('admin_logout') }}" style="color:#ff8a65;margin-left:20px">Sign Out</a>
+  </nav>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin:12px 28px 0">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div class="layout">
+  <div class="sidebar">
+    <a href="{{ url_for('admin_dashboard') }}" class="active">📊 Customers</a>
+    <a href="{{ url_for('index') }}" target="_blank">🌐 View Website</a>
+    <a href="{{ url_for('admin_logout') }}" style="color:#ff8a65;margin-top:auto">⬅ Sign Out</a>
+  </div>
+
+  <div class="main-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h1 style="font-size:22px;font-weight:700;color:var(--navy)">Customer Management</h1>
+      <button class="btn btn-orange" onclick="document.getElementById('addModal').classList.add('open')">
+        + Add Customer
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Customers</div>
+        <div class="kpi-value">{{ stats.total_customers }}</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Active Licenses</div>
+        <div class="kpi-value">{{ stats.active_licenses }}</div>
+      </div>
+      <div class="kpi-card cyan">
+        <div class="kpi-label">Total Records Synced</div>
+        <div class="kpi-value">{{ stats.total_records }}</div>
+      </div>
+    </div>
+
+    <!-- Customer Table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:18px 24px;border-bottom:1px solid var(--border);font-weight:600;color:var(--navy)">
+        All Customers & Licenses
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Name</th><th>Company</th><th>Email</th>
+              <th>Plan</th><th>License Key</th><th>Expires</th>
+              <th>Records</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for c in customers %}
+            <tr>
+              <td>{{ c.id }}</td>
+              <td><strong>{{ c.name }}</strong></td>
+              <td>{{ c.company }}</td>
+              <td style="font-size:12px">{{ c.email }}</td>
+              <td><span class="badge badge-navy">{{ c.plan or '—' }}</span></td>
+              <td style="font-size:11px;font-family:monospace;color:var(--muted)">
+                {{ c.license_key or '—' }}
+              </td>
+              <td style="font-size:12px">{{ c.expires_at or '—' }}</td>
+              <td>{{ c.record_count }}</td>
+              <td>
+                {% if c.lic_active %}
+                  <span class="badge badge-green">Active</span>
+                {% else %}
+                  <span class="badge badge-red">Suspended</span>
+                {% endif %}
+              </td>
+              <td style="white-space:nowrap">
+                {% if c.id %}
+                  <a href="{{ url_for('admin_toggle_license', lid=c.id) }}"
+                     class="btn btn-sm {% if c.lic_active %}btn-red{% else %}btn-green{% endif %}"
+                     onclick="return confirm('Toggle license for {{ c.name }}?')">
+                    {% if c.lic_active %}Suspend{% else %}Activate{% endif %}
+                  </a>
+                  <button class="btn btn-sm btn-outline"
+                          onclick="showExtend({{ c.id }}, '{{ c.name }}')">
+                    + Extend
+                  </button>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">
+              No customers yet.
+            </td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CUSTOMER MODAL -->
+<div id="addModal" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('addModal').classList.remove('open')">✕</button>
+    <h3>Add New Customer</h3>
+    <form method="POST" action="{{ url_for('admin_add_customer') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
+          <input type="text" name="password" required placeholder="Set login password">
+        </div>
+        <div class="form-group">
+          <label>Company</label>
+          <input type="text" name="company">
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" name="phone">
+        </div>
+        <div class="form-group">
+          <label>Plan</label>
+          <select name="plan">
+            <option>Standard</option>
+            <option>Professional</option>
+            <option>Enterprise</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Validity (days)</label>
+          <select name="validity_days">
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="180">6 months</option>
+            <option value="365" selected>1 year</option>
+            <option value="730">2 years</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Max Sites</label>
+          <select name="max_sites">
+            <option value="1">1 site</option>
+            <option value="3">3 sites</option>
+            <option value="5">5 sites</option>
+            <option value="99">Unlimited</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-navy" style="flex:1;justify-content:center">
+          Create Customer & License
+        </button>
+        <button type="button" class="btn btn-outline"
+                onclick="document.getElementById('addModal').classList.remove('open')">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EXTEND LICENSE MODAL -->
+<div id="extendModal" class="modal-overlay">
+  <div class="modal-box" style="width:340px">
+    <button class="modal-close" onclick="document.getElementById('extendModal').classList.remove('open')">✕</button>
+    <h3>Extend License</h3>
+    <p id="extendName" style="color:var(--muted);font-size:13px;margin-bottom:16px"></p>
+    <form id="extendForm" method="POST">
+      <div class="form-group">
+        <label>Add Days</label>
+        <select name="days">
+          <option value="30">30 days</option>
+          <option value="90">90 days</option>
+          <option value="180">6 months</option>
+          <option value="365" selected>1 year</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-green" style="flex:1;justify-content:center">Extend</button>
+        <button type="button" class="btn btn-outline"
+                onclick="document.getElementById('extendModal').classList.remove('open')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showExtend(lid, name) {
+  document.getElementById('extendName').textContent = 'Customer: ' + name;
+  document.getElementById('extendForm').action = '/admin/license/extend/' + lid;
+  document.getElementById('extendModal').classList.add('open');
+}
+window.onclick = e => {
+  if (e.target.classList.contains('modal-overlay'))
+    e.target.classList.remove('open');
+}
+</script>
+</body>
+</html>

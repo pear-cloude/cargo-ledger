@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Records — Cargo-Ledger{% endblock %}
+{% block content %}
+<div style="padding:24px 28px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;
+              margin-bottom:18px">
+    <div>
+      <h1 style="font-size:22px;font-weight:700;color:var(--navy)">
+        Weighbridge Records
+      </h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:3px">
+        {{ total }} records
+        {% if date_from or date_to or search %}
+          &nbsp;·&nbsp;
+          <a href="{{ url_for('records') }}"
+             style="color:var(--red);font-size:12px">✕ Clear filters</a>
+        {% endif %}
+        {% if is_govt %}
+          &nbsp;·&nbsp;
+          <span style="color:#c62828;font-weight:600">Read-Only</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <form method="GET" id="filterForm">
+    <div style="background:#fff;border-radius:12px;padding:16px 20px;
+                margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;
+                align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+
+      <!-- Site filter -->
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;
+                      color:var(--muted);margin-bottom:4px">🏭 Site</label>
+        <select name="site" onchange="this.form.submit()"
+                style="padding:7px 10px;border:1.5px solid var(--border);
+                       border-radius:8px;font-size:13px;font-family:inherit">
+          <option value="all" {% if site_filter=='all' %}selected{% endif %}>
+            All Sites
+          </option>
+          {% for sid in site_ids %}
+          <option value="{{ sid }}" {% if site_filter==sid %}selected{% endif %}>
+            {{ sid }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Text search -->
+      <div style="flex:2;min-width:180px">
+        <label style="display:block;font-size:11px;font-weight:600;
+                      color:var(--muted);margin-bottom:4px">🔍 Search</label>
+        <input type="text" name="search" value="{{ search }}"
+               placeholder="Vehicle, party, material, RFID, RST No…"
+               style="width:100%;padding:7px 11px;border:1.5px solid var(--border);
+                      border-radius:8px;font-size:13px;font-family:inherit">
+      </div>
+
+      <!-- Date from -->
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;
+                      color:var(--muted);margin-bottom:4px">📅 From</label>
+        <input type="date" name="date_from" value="{{ date_from }}"
+               max="{{ now.strftime('%Y-%m-%d') }}"
+               style="padding:7px 10px;border:1.5px solid var(--border);
+                      border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer">
+      </div>
+
+      <!-- Date to -->
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;
+                      color:var(--muted);margin-bottom:4px">📅 To</label>
+        <input type="date" name="date_to" value="{{ date_to }}"
+               max="{{ now.strftime('%Y-%m-%d') }}"
+               style="padding:7px 10px;border:1.5px solid var(--border);
+                      border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer">
+      </div>
+
+      <input type="hidden" name="sort" value="{{ sort_col }}">
+      <input type="hidden" name="dir"  value="{{ sort_dir }}">
+
+      <div style="display:flex;gap:7px;align-items:flex-end">
+        <button class="btn btn-navy" type="submit">Apply</button>
+        <a href="{{ url_for('records') }}" class="btn btn-outline">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Quick shortcuts -->
+  <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:12px;color:var(--muted)">Quick:</span>
+    <a href="?date_from={{ now.strftime('%Y-%m-%d') }}&date_to={{ now.strftime('%Y-%m-%d') }}"
+       class="btn btn-outline btn-sm">Today</a>
+    <a href="?date_from={{ now.strftime('%Y-%m-01') }}&date_to={{ now.strftime('%Y-%m-%d') }}"
+       class="btn btn-outline btn-sm">This Month</a>
+    <a href="{{ url_for('records') }}" class="btn btn-outline btn-sm">All Records</a>
+  </div>
+
+  <!-- Summary strip -->
+  {% if date_from or date_to or search or site_filter != 'all' %}
+  <div style="background:linear-gradient(90deg,var(--navy),#283593);
+              color:#fff;border-radius:10px;padding:14px 20px;
+              margin-bottom:16px;display:flex;gap:28px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:11px;opacity:.7;text-transform:uppercase">Trips</div>
+      <div style="font-size:22px;font-weight:700">{{ total }}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;opacity:.7;text-transform:uppercase">Gross</div>
+      <div style="font-size:22px;font-weight:700">
+        {{ "{:,.0f}".format(totals.tg or 0) }} kg
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;opacity:.7;text-transform:uppercase">Tare</div>
+      <div style="font-size:22px;font-weight:700">
+        {{ "{:,.0f}".format(totals.tt or 0) }} kg
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 14px">
+      <div style="font-size:11px;opacity:.7;text-transform:uppercase">Net Total</div>
+      <div style="font-size:24px;font-weight:800">
+        {{ "{:,.0f}".format(totals.tn or 0) }} kg
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Table -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {% macro th(col, label) %}
+              {% set nd = 'asc' if sort_col==col and sort_dir=='desc' else 'desc' %}
+              <th>
+                <a href="?{{ qs(sort=col, dir=nd, page=1) }}"
+                   style="color:#fff;text-decoration:none;
+                          display:inline-flex;align-items:center;gap:4px">
+                  {{ label }}
+                  {% if sort_col == col %}
+                    {{ '↑' if sort_dir=='asc' else '↓' }}
+                  {% else %}
+                    <span style="opacity:.4">↕</span>
+                  {% endif %}
+                </a>
+              </th>
+            {% endmacro %}
+            {{ th('id',             '#') }}
+            {{ th('site_id',        'Site') }}
+            {{ th('challan_id',     'RST No') }}
+            {{ th('date',           'Date') }}
+            {{ th('vehicle_number', 'Vehicle No') }}
+            {{ th('party_name',     'Party') }}
+            <th>RFID</th>
+            {{ th('material',       'Material') }}
+            {{ th('gross_weight',   'Gross (kg)') }}
+            <th>Gross Time</th>
+            {{ th('tare_weight',    'Tare (kg)') }}
+            <th>Tare Time</th>
+            {{ th('net_weight',     'Net (kg)') }}
+            <th>Net Time</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td style="color:var(--muted);font-size:11px">
+              {{ loop.index + (page-1)*25 }}
+            </td>
+            <td>
+              <span class="badge
+                {% if r.site_id=='WB001' %}badge-navy
+                {% elif r.site_id=='WB002' %}badge-orange
+                {% else %}badge-green{% endif %}">
+                {{ r.site_id }}
+              </span>
+            </td>
+            <td><span class="badge badge-navy">{{ r.challan_id }}</span></td>
+            <td>{{ r.date }}</td>
+            <td><strong>{{ r.vehicle_number }}</strong></td>
+            <td>{{ r.party_name }}</td>
+            <td style="font-size:11px;color:var(--muted);max-width:100px;
+                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ r.rfid_tag }}">{{ r.rfid_tag }}</td>
+            <td>{{ r.material }}</td>
+            <td style="text-align:right">{{ "{:,.0f}".format(r.gross_weight or 0) }}</td>
+            <td style="font-size:11px;color:var(--muted)">
+              {{ r.gross_datetime[-8:] if r.gross_datetime else '' }}
+            </td>
+            <td style="text-align:right">{{ "{:,.0f}".format(r.tare_weight or 0) }}</td>
+            <td style="font-size:11px;color:var(--muted)">
+              {{ r.tare_datetime[-8:] if r.tare_datetime else '' }}
+            </td>
+            <td style="text-align:right">
+              <strong>{{ "{:,.0f}".format(r.net_weight or 0) }}</strong>
+            </td>
+            <td style="font-size:11px;color:var(--muted)">
+              {{ r.net_datetime[-8:] if r.net_datetime else '' }}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="14" style="text-align:center;color:var(--muted);padding:32px">
+            No records match your filters.
+            <a href="{{ url_for('records') }}" style="color:var(--navy)">
+              Clear filters →
+            </a>
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if pages > 1 %}
+  <div class="pagination">
+    {% if page > 1 %}<a href="?{{ qs(page=page-1) }}">‹</a>{% endif %}
+    {% for p in range(1, pages+1) %}
+      {% if p == page %}
+        <span class="current">{{ p }}</span>
+      {% elif p<=2 or p>=pages-1 or (p>=page-2 and p<=page+2) %}
+        <a href="?{{ qs(page=p) }}">{{ p }}</a>
+      {% elif p==3 or p==pages-2 %}
+        <span style="border:none;color:var(--muted)">…</span>
+      {% endif %}
+    {% endfor %}
+    {% if page < pages %}<a href="?{{ qs(page=page+1) }}">›</a>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.querySelectorAll('input[type=date]').forEach(el=>{
+  el.addEventListener('change',()=>document.getElementById('filterForm').submit());
+});
+</script>
+{% endblock %}

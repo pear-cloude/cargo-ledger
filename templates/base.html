@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Cargo-Ledger{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% block head %}{% endblock %}
+</head>
+<body>
+<nav class="topbar">
+  <span class="brand">⚖ Cargo-Ledger</span>
+  <nav>
+    <a href="{{ url_for('dashboard') }}"
+       class="{% if request.endpoint=='dashboard' %}active{% endif %}">
+      Dashboard
+    </a>
+    <a href="{{ url_for('records') }}"
+       class="{% if request.endpoint=='records' %}active{% endif %}">
+      Records
+    </a>
+    {% if session.get('role') == 'govt' %}
+      <span style="background:#c62828;color:#fff;padding:3px 10px;
+                   border-radius:20px;font-size:11px;font-weight:700;margin-left:10px">
+        GOVT — READ ONLY
+      </span>
+    {% elif session.get('role') == 'manager' %}
+      <span style="background:var(--orange);color:#fff;padding:3px 10px;
+                   border-radius:20px;font-size:11px;font-weight:700;margin-left:10px">
+        MANAGER
+      </span>
+    {% endif %}
+    <a href="{{ url_for('logout') }}" style="color:#ff8a65;margin-left:14px">
+      Sign Out
+    </a>
+  </nav>
+</nav>
+
+<!-- Role bar -->
+<div style="background:linear-gradient(90deg,var(--navy),#283593);
+            color:#fff;padding:8px 28px;font-size:12px;
+            display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <div>
+    Welcome, <strong>{{ session.get('user_name','') }}</strong>
+    &nbsp;·&nbsp;
+    Access: <strong>WB001, WB002, WB003 (All Sites)</strong>
+  </div>
+  <div style="opacity:.8">
+    {{ now.strftime('%A, %d %B %Y') }}
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin:10px 28px 0">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<footer>
+  © 2026 Cargo-Ledger by Trionex Labs &nbsp;·&nbsp;
+  Weighbridge Monitoring Portal
+</footer>
+</body>
+</html>

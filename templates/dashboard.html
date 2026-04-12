@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Cargo-Ledger{% endblock %}
+
+{% block content %}
+<div style="padding:24px 28px">
+
+  <!-- Header + date picker -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;
+              margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 style="font-size:22px;font-weight:700;color:var(--navy)">Dashboard</h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:3px">
+        Showing: <strong>{{ filter_date }}</strong>
+        {% if is_govt %}
+          &nbsp;·&nbsp;
+          <span style="color:#c62828;font-weight:600">Read-Only View</span>
+        {% endif %}
+      </p>
+    </div>
+    <form method="GET" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:12px;font-weight:600;color:var(--muted)">📅 Date:</label>
+      <input type="date" name="date" value="{{ filter_date_iso }}"
+             max="{{ now.strftime('%Y-%m-%d') }}"
+             onchange="this.form.submit()"
+             style="padding:7px 12px;border:1.5px solid var(--border);
+                    border-radius:8px;font-size:13px;cursor:pointer">
+      <button class="btn btn-navy btn-sm" type="submit">Filter</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">Today</a>
+    </form>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">{{ filter_date }} — Trips</div>
+      <div class="kpi-value">{{ today_trips }}</div>
+      <div class="kpi-unit">total entries</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Net Weight</div>
+      <div class="kpi-value">{{ "{:,.0f}".format(today_net) }}</div>
+      <div class="kpi-unit">kg</div>
+    </div>
+    <div class="kpi-card" style="border-color:#7986cb">
+      <div class="kpi-label">Gross Weight</div>
+      <div class="kpi-value">{{ "{:,.0f}".format(today_gross) }}</div>
+      <div class="kpi-unit">kg</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Month Net ({{ filter_date[3:] }})</div>
+      <div class="kpi-value">{{ "{:,.0f}".format(month_net) }}</div>
+      <div class="kpi-unit">kg</div>
+    </div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">Total Records</div>
+      <div class="kpi-value">{{ total_trips }}</div>
+      <div class="kpi-unit">all time</div>
+    </div>
+  </div>
+
+  <!-- Per-site breakdown -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+              gap:14px;margin-bottom:22px">
+    {% for sid, data in site_breakdown.items() %}
+    <div style="background:#fff;border-radius:10px;padding:16px 20px;
+                box-shadow:0 1px 4px rgba(0,0,0,.08);
+                border-top:3px solid
+                  {% if loop.index==1 %}var(--navy)
+                  {% elif loop.index==2 %}var(--orange)
+                  {% else %}var(--green){% endif %}">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);
+                  text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
+        {{ sid }}
+      </div>
+      <div style="display:flex;gap:16px">
+        <div>
+          <div style="font-size:11px;color:var(--muted)">Trips</div>
+          <div style="font-size:20px;font-weight:700">{{ data.trips }}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted)">Net (kg)</div>
+          <div style="font-size:20px;font-weight:700">
+            {{ "{:,.0f}".format(data.net) }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">
+        7-Day Net Weight (Tonnes) — ending {{ filter_date }}
+      </div>
+      <canvas id="trendChart" height="110"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Parties by Net Weight</div>
+      <canvas id="partyChart" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- Records table -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;
+                align-items:center;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">
+          Records — {{ filter_date }}
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">
+          {{ today_trips }} entries &nbsp;·&nbsp;
+          Net: {{ "{:,.0f}".format(today_net) }} kg
+        </div>
+      </div>
+      <a href="{{ url_for('records') }}" class="btn btn-outline btn-sm">
+        📋 Full Records
+      </a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>RST No</th><th>Site</th><th>Vehicle</th><th>Party</th>
+            <th>Material</th><th>Gross (kg)</th><th>Tare (kg)</th>
+            <th>Net (kg)</th><th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in recent %}
+          <tr>
+            <td><span class="badge badge-navy">{{ r.challan_id }}</span></td>
+            <td>
+              <span class="badge
+                {% if r.site_id=='WB001' %}badge-navy
+                {% elif r.site_id=='WB002' %}badge-orange
+                {% else %}badge-green{% endif %}">
+                {{ r.site_id }}
+              </span>
+            </td>
+            <td><strong>{{ r.vehicle_number }}</strong></td>
+            <td>{{ r.party_name }}</td>
+            <td>{{ r.material }}</td>
+            <td style="text-align:right">{{ "{:,.0f}".format(r.gross_weight or 0) }}</td>
+            <td style="text-align:right">{{ "{:,.0f}".format(r.tare_weight  or 0) }}</td>
+            <td style="text-align:right">
+              <strong>{{ "{:,.0f}".format(r.net_weight or 0) }}</strong>
+            </td>
+            <td style="font-size:11px;color:var(--muted)">
+              {{ r.gross_datetime[-8:] if r.gross_datetime else '' }}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:28px">
+            No records for {{ filter_date }}.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const trendLabels = {{ trend_labels|safe }};
+const trendData   = {{ trend_data|safe }};
+new Chart(document.getElementById("trendChart"), {
+  type:"bar",
+  data:{
+    labels: trendLabels,
+    datasets:[{
+      label:"Net (tonnes)", data: trendData,
+      backgroundColor: trendData.map((v,i)=>
+        i===trendData.length-1?"#1a237e":"#90caf9"),
+      borderRadius:6
+    }]
+  },
+  options:{responsive:true,plugins:{legend:{display:false}},
+    scales:{y:{grid:{color:"#f0f2f7"},ticks:{font:{size:11}}},
+            x:{grid:{display:false},ticks:{font:{size:11}}}}}
+});
+
+const parties  = [{% for p in parties %}"{{ p.party_name }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const partyVals= [{% for p in parties %}{{ ((p.total or 0)/1000)|round(2) }}{% if not loop.last %},{% endif %}{% endfor %}];
+new Chart(document.getElementById("partyChart"), {
+  type:"bar",
+  data:{
+    labels:parties,
+    datasets:[{data:partyVals,
+      backgroundColor:["#1a237e","#283593","#3949ab","#5c6bc0","#7986cb"],
+      borderRadius:6}]
+  },
+  options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:"#f0f2f7"},ticks:{font:{size:11}}},
+            y:{grid:{display:false},ticks:{font:{size:11}}}}}
+});
+</script>
+{% endblock %}

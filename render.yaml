@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: cargo-ledger
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python -c "from app import init_db; init_db()"
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: KEY_WB001
+        value: CARGO-WB001-SECRET
+      - key: KEY_WB002
+        value: CARGO-WB002-SECRET
+      - key: KEY_WB003
+        value: CARGO-WB003-SECRET
