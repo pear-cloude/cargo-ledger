@@ -9,14 +9,15 @@ from flask import (
 )
 from functools import wraps
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 import sqlite3
 import hashlib
 import secrets
 import os
 
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # APP CONFIGURATION
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
@@ -26,10 +27,9 @@ DB_PATH = os.path.join(INSTANCE_DIR, "cargoledger.db")
 
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
-
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # DATABASE UTILITIES
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -81,17 +81,17 @@ def init_db():
         );
         """)
 
-        # Default admin
+        # Default Admin
         db.execute(
             "INSERT OR IGNORE INTO admins (username, password) VALUES (?, ?)",
             ("admin", _hash("admin@cargo2024"))
         )
 
-        # Default manager
+        # Default Manager
         db.execute("""
             INSERT OR IGNORE INTO users
-            (name, email, password, role, site_ids, is_active)
-            VALUES (?, ?, ?, ?, ?, 1)
+            (name, email, password, role, site_ids)
+            VALUES (?, ?, ?, ?, ?)
         """, (
             "Site Manager",
             "manager@cargo.com",
@@ -100,11 +100,11 @@ def init_db():
             "WB001,WB002,WB003"
         ))
 
-        # Default government user
+        # Default Government Officer
         db.execute("""
             INSERT OR IGNORE INTO users
-            (name, email, password, role, site_ids, is_active)
-            VALUES (?, ?, ?, ?, ?, 1)
+            (name, email, password, role, site_ids)
+            VALUES (?, ?, ?, ?, ?)
         """, (
             "Govt Officer",
             "govt@cargo.com",
@@ -116,30 +116,34 @@ def init_db():
         db.commit()
 
 
-# Initialize database automatically (CRITICAL FOR RENDER)
-try:
-    init_db()
-    print("✅ Database initialized successfully.")
-except Exception as e:
-    print(f"❌ Database initialization failed: {e}")
+# Initialize DB (Required for Render)
+init_db()
+
+# ─────────────────────────────────────────────────────────────
+# CONTEXT PROCESSORS
+# ─────────────────────────────────────────────────────────────
+@app.context_processor
+def inject_globals():
+    return {"now": datetime.now()}
 
 
-# ──────────────────────────────────────────────────────────────────────
-# TEMPLATE HELPERS
-# ──────────────────────────────────────────────────────────────────────
+@app.context_processor
+def utility_processor():
+    def qs(**kwargs):
+        args = request.args.to_dict()
+        args.update({k: v for k, v in kwargs.items() if v is not None})
+        return urlencode(args)
+    return dict(qs=qs)
+
+
 @app.template_filter("yesterday")
 def yesterday_filter(dt):
     return (dt - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
-@app.context_processor
-def inject_now():
-    return {"now": datetime.now()}
-
-
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # AUTH DECORATORS
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -162,9 +166,9 @@ def is_govt():
     return session.get("role") == "govt"
 
 
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # ROUTES
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     return render_template("landing.html")
@@ -203,9 +207,18 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    site_ids = session.get("site_ids", "WB001,WB002,WB003").split(",")
+
+    placeholders = ",".join("?" * len(site_ids))
+
     with get_db() as db:
         rows = db.execute(
-            "SELECT * FROM weighbridge_records ORDER BY id DESC LIMIT 50"
+            f"""
+            SELECT * FROM weighbridge_records
+            WHERE site_id IN ({placeholders})
+            ORDER BY id DESC LIMIT 50
+            """,
+            site_ids
         ).fetchall()
 
     return render_template(
@@ -218,7 +231,7 @@ def dashboard():
         month_net=0,
         total_trips=len(rows),
         site_breakdown={},
-        site_ids=["WB001", "WB002", "WB003"],
+        site_ids=site_ids,
         trend_labels="[]",
         trend_data="[]",
         parties=[],
@@ -228,9 +241,125 @@ def dashboard():
     )
 
 
-# ──────────────────────────────────────────────────────────────────────
-# API SYNC (Bridge App Integration)
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# RECORDS ROUTE
+# ─────────────────────────────────────────────────────────────
+@app.route("/records")
+@login_required
+def records():
+    db = get_db()
+
+    site_ids = session.get("site_ids", "WB001,WB002,WB003").split(",")
+
+    site_filter = request.args.get("site", "all")
+    search = request.args.get("search", "").strip()
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    sort_col = request.args.get("sort", "id")
+    sort_dir = request.args.get("dir", "desc")
+    page = int(request.args.get("page", 1))
+    per_page = 25
+    offset = (page - 1) * per_page
+
+    allowed_cols = {
+        "id", "site_id", "challan_id", "date",
+        "vehicle_number", "party_name", "material",
+        "gross_weight", "tare_weight", "net_weight"
+    }
+
+    if sort_col not in allowed_cols:
+        sort_col = "id"
+    if sort_dir not in {"asc", "desc"}:
+        sort_dir = "desc"
+
+    conditions = []
+    params = []
+
+    if site_filter != "all":
+        conditions.append("site_id = ?")
+        params.append(site_filter)
+    else:
+        placeholders = ",".join("?" * len(site_ids))
+        conditions.append(f"site_id IN ({placeholders})")
+        params.extend(site_ids)
+
+    if search:
+        like = f"%{search}%"
+        conditions.append("""
+            (vehicle_number LIKE ? OR
+             party_name LIKE ? OR
+             material LIKE ? OR
+             rfid_tag LIKE ? OR
+             challan_id LIKE ?)
+        """)
+        params.extend([like] * 5)
+
+    if date_from:
+        conditions.append("date >= ?")
+        params.append(date_from)
+
+    if date_to:
+        conditions.append("date <= ?")
+        params.append(date_to)
+
+    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    total = db.execute(
+        f"SELECT COUNT(*) FROM weighbridge_records {where_clause}",
+        params
+    ).fetchone()[0]
+
+    rows = db.execute(
+        f"""
+        SELECT * FROM weighbridge_records
+        {where_clause}
+        ORDER BY {sort_col} {sort_dir}
+        LIMIT ? OFFSET ?
+        """,
+        params + [per_page, offset]
+    ).fetchall()
+
+    totals_row = db.execute(
+        f"""
+        SELECT
+            SUM(gross_weight) AS tg,
+            SUM(tare_weight) AS tt,
+            SUM(net_weight) AS tn
+        FROM weighbridge_records
+        {where_clause}
+        """,
+        params
+    ).fetchone()
+
+    totals = {
+        "tg": totals_row["tg"] or 0,
+        "tt": totals_row["tt"] or 0,
+        "tn": totals_row["tn"] or 0,
+    }
+
+    pages = max(1, (total + per_page - 1) // per_page)
+
+    return render_template(
+        "records.html",
+        rows=rows,
+        total=total,
+        site_ids=site_ids,
+        site_filter=site_filter,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+        sort_col=sort_col,
+        sort_dir=sort_dir,
+        page=page,
+        pages=pages,
+        totals=totals,
+        is_govt=is_govt(),
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# API SYNC (Bridge Integration)
+# ─────────────────────────────────────────────────────────────
 @app.route("/api/sync", methods=["POST"])
 def api_sync():
     key = request.headers.get("X-License-Key", "")
@@ -250,12 +379,12 @@ def api_sync():
 
     with get_db() as db:
         for r in records:
-            existing = db.execute(
+            exists = db.execute(
                 "SELECT id FROM weighbridge_records WHERE challan_id=? AND site_id=?",
                 (r.get("challan_id"), site_id)
             ).fetchone()
 
-            if not existing:
+            if not exists:
                 db.execute("""
                     INSERT INTO weighbridge_records (
                         site_id, challan_id, date, vehicle_number,
@@ -265,18 +394,18 @@ def api_sync():
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     site_id,
-                    r.get("challan_id", ""),
-                    r.get("date", ""),
-                    r.get("vehicle_number", ""),
-                    r.get("party_name", ""),
-                    r.get("material", ""),
+                    r.get("challan_id"),
+                    r.get("date"),
+                    r.get("vehicle_number"),
+                    r.get("party_name"),
+                    r.get("material"),
                     r.get("gross_weight", 0),
                     r.get("tare_weight", 0),
                     r.get("net_weight", 0),
-                    r.get("rfid_tag", ""),
-                    r.get("gross_datetime", ""),
-                    r.get("tare_datetime", ""),
-                    r.get("net_datetime", "")
+                    r.get("rfid_tag"),
+                    r.get("gross_datetime"),
+                    r.get("tare_datetime"),
+                    r.get("net_datetime"),
                 ))
                 inserted += 1
 
@@ -285,9 +414,9 @@ def api_sync():
     return jsonify({"ok": True, "inserted": inserted})
 
 
-# ──────────────────────────────────────────────────────────────────────
-# ADMIN LOGIN
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# ADMIN ROUTES
+# ─────────────────────────────────────────────────────────────
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -313,12 +442,19 @@ def admin_login():
 @admin_required
 def admin_panel():
     with get_db() as db:
-        users = db.execute("SELECT * FROM users").fetchall()
+        users = db.execute("SELECT * FROM users ORDER BY id DESC").fetchall()
     return render_template("admin_panel.html", users=users)
 
 
-# ──────────────────────────────────────────────────────────────────────
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin_id", None)
+    return redirect(url_for("admin_login"))
+
+
+# ─────────────────────────────────────────────────────────────
 # ENTRY POINT
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0",
+            port=int(os.environ.get("PORT", 5000)))
