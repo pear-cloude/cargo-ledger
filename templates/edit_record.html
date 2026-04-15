@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Edit Record — Cargo-Ledger</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+</head>
+<body>
+
+<nav class="topbar">
+  <span class="brand">⚖ Cargo-Ledger</span>
+  <nav>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('records') }}" class="active">Records</a>
+    <a href="{{ url_for('logout') }}" style="color:#ff8a65;margin-left:14px">Sign Out</a>
+  </nav>
+</nav>
+
+<div style="background:linear-gradient(90deg,#1a237e,#283593);
+            color:#fff;padding:8px 28px;font-size:12px">
+  Welcome, <strong>{{ session.get('user_name','') }}</strong>
+  &nbsp;·&nbsp; Edit Record
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin:10px 28px 0">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div style="padding:28px;max-width:700px;margin:0 auto">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+    <a href="{{ url_for('records') }}" class="btn btn-outline btn-sm">← Back</a>
+    <h1 style="font-size:20px;font-weight:700;color:var(--navy)">
+      Edit Weighbridge Record
+    </h1>
+  </div>
+
+  <!-- Challan ID — READ ONLY -->
+  <div style="background:#f5f7ff;border:1.5px solid #c5cae9;border-radius:10px;
+              padding:14px 20px;margin-bottom:20px;display:flex;gap:24px;
+              flex-wrap:wrap">
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+                  font-weight:600">RST / Challan ID (Read-only)</div>
+      <div style="font-size:20px;font-weight:700;color:var(--navy)">
+        {{ rec.challan_id }}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+                  font-weight:600">Site</div>
+      <div style="font-size:18px;font-weight:700">{{ rec.site_id }}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+                  font-weight:600">Slip Type</div>
+      <div style="font-size:18px;font-weight:700">{{ rec.slip_type }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="POST">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <!-- Date -->
+        <div class="form-group">
+          <label>Date (dd-mm-yyyy)</label>
+          <input type="text" name="date"
+                 value="{{ rec.date }}"
+                 placeholder="e.g. 14-04-2026" required>
+        </div>
+
+        <!-- Vehicle No -->
+        <div class="form-group">
+          <label>Vehicle Number</label>
+          <input type="text" name="vehicle_number"
+                 value="{{ rec.vehicle_number or '' }}">
+        </div>
+
+        <!-- Party -->
+        <div class="form-group">
+          <label>Party Name</label>
+          <input type="text" name="party_name"
+                 value="{{ rec.party_name or '' }}">
+        </div>
+
+        <!-- Material -->
+        <div class="form-group">
+          <label>Material</label>
+          <input type="text" name="material"
+                 value="{{ rec.material or '' }}">
+        </div>
+
+        <!-- RFID -->
+        <div class="form-group">
+          <label>RFID Tag</label>
+          <input type="text" name="rfid_tag"
+                 value="{{ rec.rfid_tag or '' }}">
+        </div>
+
+        <!-- Driver -->
+        <div class="form-group">
+          <label>Driver</label>
+          <input type="text" name="driver"
+                 value="{{ rec.driver or '' }}">
+        </div>
+
+      </div>
+
+      <!-- Weight section -->
+      <div style="background:#f5f5f5;border-radius:8px;padding:16px;
+                  margin:8px 0 16px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);
+                    text-transform:uppercase;margin-bottom:12px">
+          Weight Data (kg) — Net is auto-calculated
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+          <div class="form-group" style="margin:0">
+            <label>Gross Weight (kg)</label>
+            <input type="number" step="0.01" name="gross_weight"
+                   value="{{ rec.gross_weight or 0 }}"
+                   oninput="calcNet()" id="gross" required>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Tare Weight (kg)</label>
+            <input type="number" step="0.01" name="tare_weight"
+                   value="{{ rec.tare_weight or 0 }}"
+                   oninput="calcNet()" id="tare" required>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Net Weight (kg)</label>
+            <div style="padding:9px 13px;background:#e8f5e9;border-radius:8px;
+                        font-size:14px;font-weight:700;color:var(--green)"
+                 id="net_display">
+              {{ rec.net_weight or 0 }}
+            </div>
+            <!-- Hidden field so form still posts net_weight -->
+            <input type="hidden" name="net_weight" id="net_hidden"
+                   value="{{ rec.net_weight or 0 }}">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-navy" style="flex:1;justify-content:center;
+                padding:11px;font-size:14px">
+          💾 Save Changes
+        </button>
+        <a href="{{ url_for('records') }}" class="btn btn-outline"
+           style="padding:11px 20px">
+          Cancel
+        </a>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Timestamps (display only) -->
+  <div style="margin-top:16px;padding:14px 18px;background:#f9f9f9;
+              border-radius:8px;font-size:12px;color:var(--muted)">
+    <strong>Timestamps (read-only):</strong> &nbsp;
+    Gross: {{ rec.gross_datetime }} &nbsp;·&nbsp;
+    Tare: {{ rec.tare_datetime }} &nbsp;·&nbsp;
+    Net: {{ rec.net_datetime }}
+  </div>
+
+</div>
+
+<script>
+function calcNet() {
+  const g = parseFloat(document.getElementById('gross').value) || 0;
+  const t = parseFloat(document.getElementById('tare').value)  || 0;
+  const n = Math.round((g - t) * 100) / 100;
+  document.getElementById('net_display').textContent = n;
+  document.getElementById('net_hidden').value = n;
+  document.getElementById('net_display').style.color =
+    n < 0 ? '#c62828' : 'var(--green)';
+}
+</script>
+
+<footer>© 2026 Cargo-Ledger by Trionex Labs</footer>
+</body>
+</html>
