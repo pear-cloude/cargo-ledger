@@ -192,5 +192,118 @@ window.onclick = e => {
     e.target.classList.remove('open');
 };
 </script>
+
+<!-- ══════ RST SLIP MANAGEMENT ══════ -->
+<div style="padding:0 28px 28px">
+
+  <h2 style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px">
+    📄 Daily RST Slip Links (Google Drive)
+  </h2>
+
+  <!-- Add / update slip form -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">Add or Update Today's RST Slip Link</div>
+    <form method="POST" action="{{ url_for('admin_add_rst') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;
+                  gap:12px;align-items:flex-end">
+        <div class="form-group" style="margin:0">
+          <label>Site *</label>
+          <select name="site_id" required
+                  style="width:100%;padding:9px 12px;border:1.5px solid var(--border);
+                         border-radius:8px;font-size:13px;font-family:inherit">
+            <option value="WB001">WB001 — Shantipur</option>
+            <option value="WB002">WB002 — Nabadwip</option>
+            <option value="WB003">WB003 — Balurghat</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Date *</label>
+          <input type="date" name="date" required
+                 value="{{ now.strftime('%Y-%m-%d') }}"
+                 style="width:100%;padding:9px 12px;border:1.5px solid var(--border);
+                        border-radius:8px;font-size:13px;font-family:inherit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Google Drive Link *</label>
+          <input type="url" name="drive_link" required
+                 placeholder="https://drive.google.com/..."
+                 style="width:100%;padding:9px 12px;border:1.5px solid var(--border);
+                        border-radius:8px;font-size:13px;font-family:inherit">
+        </div>
+        <div>
+          <button class="btn btn-navy" type="submit"
+                  style="height:40px;white-space:nowrap">
+            + Save Link
+          </button>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">
+        If a link already exists for the same site + date, it will be updated automatically.
+      </p>
+    </form>
+  </div>
+
+  <!-- Recent RST slips table -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:16px 22px;font-weight:600;color:var(--navy);
+                border-bottom:1px solid var(--border);
+                display:flex;justify-content:space-between;align-items:center">
+      <span>Recent RST Slip Links</span>
+      <span style="font-size:12px;color:var(--muted)">Last 30 entries</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Site</th><th>Date</th>
+            <th>Google Drive Link</th><th>Added At</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for slip in recent_slips %}
+          <tr>
+            <td style="color:var(--muted);font-size:12px">{{ slip.id }}</td>
+            <td>
+              <span class="badge
+                {% if slip.site_id=='WB001' %}badge-navy
+                {% elif slip.site_id=='WB002' %}badge-orange
+                {% else %}badge-green{% endif %}">
+                {{ slip.site_id }}
+              </span>
+            </td>
+            <td><strong>{{ slip.date.strftime('%d-%m-%Y') }}</strong></td>
+            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;
+                       white-space:nowrap">
+              <a href="{{ slip.drive_link }}" target="_blank" rel="noopener"
+                 style="color:var(--navy);font-size:12px"
+                 title="{{ slip.drive_link }}">
+                📄 View RST Slip →
+              </a>
+            </td>
+            <td style="font-size:11px;color:var(--muted)">
+              {{ slip.added_at.strftime('%d-%m-%Y %H:%M') if slip.added_at else '—' }}
+            </td>
+            <td>
+              <a href="{{ url_for('admin_delete_rst', rid=slip.id) }}"
+                 class="btn btn-sm btn-red"
+                 onclick="return confirm('Delete RST slip for {{ slip.site_id }} on {{ slip.date }}?')">
+                🗑 Delete
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align:center;color:var(--muted);padding:24px">
+              No RST slip links added yet.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
 </body>
 </html>

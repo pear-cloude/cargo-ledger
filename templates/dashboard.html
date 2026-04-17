@@ -24,6 +24,15 @@
              onchange="this.form.submit()"
              style="padding:7px 12px;border:1.5px solid var(--border);
                     border-radius:8px;font-size:13px;cursor:pointer">
+      <!-- Site filter -->
+      <select name="site" onchange="this.form.submit()"
+              style="padding:7px 11px;border:1.5px solid var(--border);
+                     border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer">
+        <option value="all" {% if site_filter=='all' %}selected{% endif %}>All Sites</option>
+        {% for sid in user_sites %}
+        <option value="{{ sid }}" {% if site_filter==sid %}selected{% endif %}>{{ sid }}</option>
+        {% endfor %}
+      </select>
       <button class="btn btn-navy btn-sm" type="submit">Filter</button>
       <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">Today</a>
     </form>
@@ -68,9 +77,23 @@
                   {% if loop.index==1 %}var(--navy)
                   {% elif loop.index==2 %}var(--orange)
                   {% else %}var(--green){% endif %}">
-      <div style="font-size:12px;font-weight:700;color:var(--muted);
-                  text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
-        {{ sid }}
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);
+                    text-transform:uppercase;letter-spacing:.6px">
+          {{ sid }}
+        </div>
+        {% if sid in rst_slips %}
+          <a href="{{ rst_slips[sid] }}" target="_blank" rel="noopener"
+             style="display:inline-flex;align-items:center;gap:4px;
+                    background:var(--navy);color:#fff;padding:3px 10px;
+                    border-radius:20px;font-size:11px;font-weight:600;
+                    text-decoration:none">
+            📄 RST Slip
+          </a>
+        {% else %}
+          <span style="font-size:11px;color:var(--muted)">No RST slip</span>
+        {% endif %}
       </div>
       <div style="display:flex;gap:16px">
         <div>

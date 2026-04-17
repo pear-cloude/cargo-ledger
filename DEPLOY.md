@@ -1,73 +1,86 @@
-# Deploy to Render.com in 5 Minutes
-## Cargo-Ledger Web Dashboard — Free Hosting
+# Cargo-Ledger — Render PostgreSQL Deployment Guide
+Trionex Labs
+
+---
+
+## Why This Migration?
+
+Render free tier uses ephemeral storage — every restart wiped SQLite data.
+This version uses Render PostgreSQL which persists permanently.
 
 ---
 
 ## Step 1 — Push to GitHub
 
 ```bash
-cd CargoLedgerWeb
-git init
-git add .
-git commit -m "Cargo-Ledger Web Dashboard"
+git init && git add . && git commit -m "Phase 8 PostgreSQL"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/cargo-ledger.git
+git remote add origin https://github.com/YOU/cargo-ledger.git
 git push -u origin main
 ```
 
-## Step 2 — Deploy on Render.com
+---
 
-1. Go to **render.com** → Sign up free (no credit card)
-2. Click **New** → **Web Service**
-3. Connect your GitHub repo → select `cargo-ledger`
-4. Settings auto-filled from `render.yaml`
-5. Click **Deploy** — live in ~3 minutes
+## Step 2 — Create PostgreSQL on Render
 
-Your URL: `https://cargo-ledger.onrender.com`
+1. render.com → New → PostgreSQL
+2. Name: cargo-ledger-db, Plan: Free
+3. Copy the Internal Database URL
+
+---
+
+## Step 3 — Deploy Web Service
+
+1. New → Web Service → connect GitHub repo
+2. Environment tab → Add variables:
+
+| Key | Value |
+|-----|-------|
+| DATABASE_URL | Paste Internal Database URL |
+| SECRET_KEY | Click Generate |
+| KEY_WB001 | CARGO-WB001-SECRET |
+| KEY_WB002 | CARGO-WB002-SECRET |
+| KEY_WB003 | CARGO-WB003-SECRET |
+
+3. Click Deploy — live in 3 minutes
+4. Tables are created automatically on startup
 
 ---
 
 ## Default Credentials
 
-| Role | Email | Password |
+| Role | Login | Password |
 |------|-------|----------|
 | Manager | manager@cargo.com | manager123 |
 | Govt | govt@cargo.com | govt1234 |
 | Admin | /admin/login → admin | admin@cargo2024 |
 
-**Change these immediately in Admin panel after first login.**
+Change all passwords after first login.
 
 ---
 
-## Role Differences
+## RST Slip Links
 
-| Feature | Manager | Govt |
-|---------|---------|------|
-| View all 3 sites | ✅ | ✅ |
-| Date-wise search | ✅ | ✅ |
-| Per-site breakdown | ✅ | ✅ |
-| Records table | ✅ | ✅ |
-| Edit records | ✅ | ❌ |
-| Delete records | ✅ | ❌ |
-| Role badge shown | MANAGER | GOVT — READ ONLY |
+Admin Panel → Daily RST Slip Links section:
+1. Select site (WB001/WB002/WB003)
+2. Pick date
+3. Paste Google Drive share link
+4. Save — appears as "📄 RST Slip" on dashboard
+
+For public Google Drive links:
+Right-click file → Share → Anyone with the link → Viewer
 
 ---
 
-## Sync Desktop App → Web
+## Bridge Uploader Config
 
-From your weighbridge PC, POST records to:
-```
-POST https://cargo-ledger.onrender.com/api/sync
-Header: X-License-Key: CARGO-WB001-SECRET
-Body: JSON array of challan records
-```
-
-Change the API keys in Render dashboard → Environment Variables.
+In bridge_uploader.py:
+  server_url: https://your-app.onrender.com
+  KEY_WB001:  CARGO-WB001-SECRET (match env var)
 
 ---
 
 ## Notes
-
-- Free Render tier sleeps after 15 min inactivity (wakes in ~30s on first request)
-- For always-on: upgrade to Render Starter ($7/month) or use Railway.app (free)
-- Data persists in `/instance/cargoledger.db` (SQLite on disk)
+- Free Render tier sleeps after 15 min (30s wake on first hit)
+- pool_pre_ping + pool_recycle=280 handle connection timeouts
+- Upgrade to Render Starter $7/mo for always-on
