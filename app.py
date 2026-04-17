@@ -305,6 +305,7 @@ def records():
 
     q = WeighbridgeRecord.query.filter(WeighbridgeRecord.site_id.in_(active_sites))
 
+    # FILTERS
     if search:
         like = f"%{search}%"
         q = q.filter(db.or_(
@@ -314,38 +315,54 @@ def records():
             WeighbridgeRecord.rfid_tag.ilike(like),
             WeighbridgeRecord.challan_id.ilike(like),
         ))
+
     if date_from:
         try:
             q = q.filter(WeighbridgeRecord.date >=
                          datetime.strptime(date_from,"%Y-%m-%d").strftime("%d-%m-%Y"))
         except ValueError: pass
+
     if date_to:
         try:
             q = q.filter(WeighbridgeRecord.date <=
                          datetime.strptime(date_to,"%Y-%m-%d").strftime("%d-%m-%Y"))
         except ValueError: pass
 
-    _smap = {"id":WeighbridgeRecord.id,"date":WeighbridgeRecord.date,
-             "vehicle_number":WeighbridgeRecord.vehicle_number,
-             "party_name":WeighbridgeRecord.party_name,
-             "material":WeighbridgeRecord.material,
-             "gross_weight":WeighbridgeRecord.gross_weight,
-             "tare_weight":WeighbridgeRecord.tare_weight,
-             "net_weight":WeighbridgeRecord.net_weight,
-             "site_id":WeighbridgeRecord.site_id,
-             "challan_id":WeighbridgeRecord.challan_id}
+    _smap = {
+        "id":WeighbridgeRecord.id,
+        "date":WeighbridgeRecord.date,
+        "vehicle_number":WeighbridgeRecord.vehicle_number,
+        "party_name":WeighbridgeRecord.party_name,
+        "material":WeighbridgeRecord.material,
+        "gross_weight":WeighbridgeRecord.gross_weight,
+        "tare_weight":WeighbridgeRecord.tare_weight,
+        "net_weight":WeighbridgeRecord.net_weight,
+        "site_id":WeighbridgeRecord.site_id,
+        "challan_id":WeighbridgeRecord.challan_id
+    }
+
     col = _smap.get(sort_col, WeighbridgeRecord.id)
-    q   = q.order_by(col.asc() if sort_dir=="asc" else col.desc())
+
+    # 🔹 APPLY ORDER FOR DATA
+    q = q.order_by(col.asc() if sort_dir=="asc" else col.desc())
 
     total = q.count()
-    agg   = q.with_entities(
-        func.coalesce(func.sum(WeighbridgeRecord.gross_weight),0).label("tg"),
-        func.coalesce(func.sum(WeighbridgeRecord.tare_weight), 0).label("tt"),
-        func.coalesce(func.sum(WeighbridgeRecord.net_weight),  0).label("tn"),
+
+    # 🔥 FIX: REMOVE ORDER BY FOR AGGREGATION
+    agg = q.order_by(None).with_entities(
+        func.coalesce(func.sum(WeighbridgeRecord.gross_weight), 0).label("tg"),
+        func.coalesce(func.sum(WeighbridgeRecord.tare_weight),  0).label("tt"),
+        func.coalesce(func.sum(WeighbridgeRecord.net_weight),   0).label("tn"),
     ).first()
-    totals = {"tg":float(agg.tg),"tt":float(agg.tt),"tn":float(agg.tn)}
-    pages  = max(1,(total+per_page-1)//per_page)
-    rows   = q.offset((page-1)*per_page).limit(per_page).all()
+
+    totals = {
+        "tg": float(agg.tg or 0),
+        "tt": float(agg.tt or 0),
+        "tn": float(agg.tn or 0)
+    }
+
+    pages = max(1,(total+per_page-1)//per_page)
+    rows  = q.offset((page-1)*per_page).limit(per_page).all()
 
     def qs(**ov):
         p={"search":search,"date_from":date_from,"date_to":date_to,
