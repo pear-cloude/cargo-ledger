@@ -10,7 +10,11 @@
 
 <!-- NAVBAR -->
 <nav class="topbar">
-  <span class="brand">⚖ Cargo-Ledger</span>
+  <a href="#" class="brand" style="text-decoration:none">
+    <img src="{{ url_for('static', filename='img/cargoledger_logo.png') }}"
+         alt="Cargo-Ledger"
+         style="height:36px;width:auto;object-fit:contain;vertical-align:middle">
+  </a>
   <nav>
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
@@ -289,11 +293,17 @@
   </div>
 </section>
 
-<footer>
-  © 2026 Cargo-Ledger by Trionex Labs &nbsp;|&nbsp;
-  <a href="{{ url_for('login') }}" style="color:rgba(255,255,255,.6)">Customer Login</a>
-  &nbsp;|&nbsp;
-  <a href="{{ url_for('admin_login') }}" style="color:rgba(255,255,255,.6)">Admin</a>
+<footer style="display:flex;align-items:center;justify-content:center;
+               gap:16px;flex-wrap:wrap;padding:20px 28px">
+  <img src="{{ url_for('static', filename='img/trionex_logo.png') }}"
+       alt="Trionex Labs"
+       style="height:26px;width:auto;object-fit:contain;opacity:.85">
+  <span style="color:rgba(255,255,255,.5)">|</span>
+  <span style="font-size:12px">© 2026 Cargo-Ledger by Trionex Labs</span>
+  <span style="color:rgba(255,255,255,.5)">|</span>
+  <a href="{{ url_for('login') }}" style="color:rgba(255,255,255,.6);font-size:12px">Customer Login</a>
+  <span style="color:rgba(255,255,255,.5)">|</span>
+  <a href="{{ url_for('admin_login') }}" style="color:rgba(255,255,255,.6);font-size:12px">Admin</a>
 </footer>
 </body>
 </html>

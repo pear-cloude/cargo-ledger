@@ -9,10 +9,13 @@
 <body>
 <div class="login-wrapper">
   <div class="login-card">
-    <div class="logo">
-      <div style="font-size:40px">⚖</div>
-      <div style="font-size:22px;font-weight:800;color:var(--navy)">Cargo-Ledger</div>
-      <div style="font-size:11px;color:var(--muted)">Weighbridge Monitoring Portal</div>
+    <div class="logo" style="margin-bottom:20px">
+      <img src="{{ url_for('static', filename='img/cargoledger_logo.png') }}"
+           alt="Cargo-Ledger"
+           style="height:52px;width:auto;object-fit:contain">
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">
+        Weighbridge Monitoring Portal
+      </div>
     </div>
     <h2>Sign In</h2>
     <p class="sub">Manager &amp; Government Access</p>
